@@ -1,13 +1,10 @@
-import os
 from datetime import datetime
 
 from airflow import DAG
-from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+from airflow.operators.python_operator import PythonOperator
 
-from src.constants import (
-    AirflowConfig,
-    SparkConfig,
-)
+from src.constants import AirflowConfig
+from src.pipelines.lastfm.entrypoint import Entrypoint
 
 
 default_args = {
@@ -16,35 +13,41 @@ default_args = {
 }
 
 with DAG(
-    dag_id="kraken_top_songs",
+    dag_id="lastfm_top_songs",
     start_date=datetime(2025, 10, 1),
     schedule_interval=None,
     catchup=False,
     default_args=default_args,
 ) as dag:
-    validate = SparkSubmitOperator(
+
+    validate = PythonOperator(
         task_id="validate",
-        application=AirflowConfig.VALIDATE_SCRIPT.value,
-        conn_id=None,  # run locally inside container
-        master=SparkConfig.SPARK_MASTER.value,
-        conf=SparkConfig.SPARK_CONF.value,
-        env_vars={
-            AirflowConfig.LASTFM_DIR_ENV.value: AirflowConfig.DEFAULT_LASTFM_DIR.value,
+        python_callable=Entrypoint.validate_task,
+        op_kwargs={
+            "input_dir": AirflowConfig.DEFAULT_INPUT_DIR.value,
         },
     )
 
-    compute = SparkSubmitOperator(
+    compute = PythonOperator(
         task_id="compute",
-        application=AirflowConfig.COMPUTE_SCRIPT.value,
-        conn_id=None,
-        master=SparkConfig.SPARK_MASTER.value,
-        conf=SparkConfig.SPARK_CONF.value,
-        env_vars={
-            AirflowConfig.LASTFM_DIR_ENV.value: AirflowConfig.DEFAULT_LASTFM_DIR.value,
-            AirflowConfig.OUTPUT_DIR_ENV.value: AirflowConfig.DEFAULT_OUTPUT_DIR.value,
+        python_callable=Entrypoint.compute_task,
+        op_kwargs={
+            "input_dir": AirflowConfig.DEFAULT_INPUT_DIR.value,
+            "events_output_dir": AirflowConfig.EVENTS_OUTPUT_DIR.value,
+            "profiles_output_dir": AirflowConfig.PROFILES_OUTPUT_DIR.value,
+        },
+    )
+    
+    post_process = PythonOperator(
+        task_id="post_process",
+        python_callable=Entrypoint.post_process_validation,
+        op_kwargs={
+            "events_path": AirflowConfig.EVENTS_OUTPUT_DIR.value,
+            "profiles_path": AirflowConfig.PROFILES_OUTPUT_DIR.value,
+            "output_dir": AirflowConfig.RESULTS_OUTPUT_DIR.value,
         },
     )
 
-    validate >> compute
+    validate >> compute >> post_process
 
 

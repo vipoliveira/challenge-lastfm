@@ -7,18 +7,10 @@ class AirflowConfig(Enum):
     DATA_DIR = "/opt/airflow/data"
     DATASET_DIR = "lastfm-dataset-1k"
     
-    # Environment variables
-    LASTFM_DIR_ENV = "LASTFM_DIR"
-    OUTPUT_DIR_ENV = "OUTPUT_DIR"
-    
-    # Default paths
-    DEFAULT_LASTFM_DIR = "/opt/airflow/assets/lastfm-dataset-1k"
-    DEFAULT_OUTPUT_DIR = "/opt/airflow/output/top_songs"
-    
-    # Script paths
-    VALIDATE_SCRIPT = "/opt/airflow/scripts/validate_events_ge.py"
-    COMPUTE_SCRIPT = "/opt/airflow/scripts/compute_top_songs.py"
-
+    # Pipeline-specific output directories
+    EVENTS_OUTPUT_DIR = "/opt/airflow/output/events"
+    PROFILES_OUTPUT_DIR = "/opt/airflow/output/profiles"
+    RESULTS_OUTPUT_DIR = "/opt/airflow/output/top_songs"
 
 class SparkConfig(Enum):
     SPARK_CONF = {"spark.sql.session.timeZone": "UTC"}
