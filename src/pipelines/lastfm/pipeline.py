@@ -6,6 +6,9 @@ from pyspark.sql import DataFrame, Window
 from pyspark.sql import functions as F
 
 from great_expectations.dataset.sparkdf_dataset import SparkDFDataset
+from src.logger import get_logger
+
+logger = get_logger(__name__)
 
 class ResultsPipeline(BasePipeline):
 
@@ -96,7 +99,7 @@ class ResultsPipeline(BasePipeline):
             if not profiles_results.get("success", False):
                 raise RuntimeError(f"Profiles validation failed: {profiles_results}")
             
-            print("Input data validation completed successfully.")
+            logger.info("Input data validation completed successfully.")
             return True
         
         df = data
@@ -124,7 +127,7 @@ class ResultsPipeline(BasePipeline):
         if not results.get("success", False):
             raise RuntimeError(f"Results validation failed: {results}")
             
-        print(f"Results validation completed successfully. Found {count} top songs.")
+        logger.info(f"Results validation completed successfully. Found {count} top songs.")
         return True
 
 class ProfilesPipeline(BasePipeline):
@@ -272,7 +275,7 @@ class EventsPipeline(BasePipeline):
             if "tracks_count" in df.columns:
                 session_count = df.select("session_id").distinct().count()
                 if session_count > SessionConfig.TOP_SESSIONS_COUNT.value:
-                    print(f"Warning: Found {session_count} sessions, expected {SessionConfig.TOP_SESSIONS_COUNT.value} or fewer")
+                    logger.warning(f"Found {session_count} sessions, expected {SessionConfig.TOP_SESSIONS_COUNT.value} or fewer")
 
         results = gdf.validate(result_format="SUMMARY")
         if not results.get("success", False):

@@ -48,6 +48,6 @@ with DAG(
         },
     )
 
-    validate >> compute >> post_process
+    compute >> validate >> post_process
 
 
